@@ -1,4 +1,6 @@
 #coding=utf-8
+import ConfigParser
+import os
 import smtplib
 import datetime
 import time
@@ -8,16 +10,16 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.image import MIMEImage
 from email.utils import parseaddr, formataddr
 
-def _format_addr(s):
-	name, addr = parseaddr(s)
-	return formataddr(( \
-		Header(name, 'utf-8').encode(), \
-		addr.encode('utf-8') if isinstance(addr, unicode) else addr))
+def get_config(section, key):
+	config = ConfigParser.ConfigParser()
+	path = os.path.split(os.path.realpath(__file__))[0] + '/info.conf'
+	config.read(path)
+	return config.get(section, key)
 
-sender = '191543154@qq.com' #发件人的邮件地址
-password='ctxsqwdenulsbieh'#发件人的客户端密码
-host='smtp.qq.com'#发件人用的邮件服务器
-receivers = ['21530084@zju.edu.cn']  # 接收邮件，可设置为你的QQ邮箱或者其他邮箱
+sender = get_config('address', 'sender')
+key = get_config('address', 'key')
+host = get_config('address', 'host')
+receiver = get_config('address', 'receiver') 
 
 # 三个参数：第一个为文本内容，第二个 plain 设置文本格式，第三个 utf-8 设置编码
 message = MIMEMultipart('related') 
@@ -34,30 +36,28 @@ mail_msg = """
 """
 msgAlternative.attach(MIMEText(mail_msg, 'html', 'utf-8'))
 
-file1 = "test.jpg"
-fp = open(file1, 'rb')
+filename = get_config('image', 'path') + get_config('image', 'name') + '.jpg'
+fp = open(filename, 'rb')
 image = MIMEImage(fp.read());
 fp.close()
 image.add_header('Content-ID', '<image1>')
 message.attach(image)
-while True:
-	hour=23
-	minute = 12
-	second = 00
-	current_time = time.localtime(time.time()) 
-	if ((current_time.tm_hour == hour) and \
-			(current_time.tm_min == minute) and \
-			 (current_time.tm_sec == second)):
 
+
+while True:
+	hour = get_config('time', 'hour')
+	minute = get_config('time', 'minute') 
+	second = get_config('time', 'second') 
+	current_time = time.localtime(time.time()) 
+	if ((current_time.tm_hour == int(hour)) and (current_time.tm_min == int(minute)) and (current_time.tm_sec == int(second))):
 		try:
 			smtpObj = smtplib.SMTP_SSL()#这个点要注意
 			smtpObj.connect(host)
-			smtpObj.login(sender,password) #邮箱登录
-			smtpObj.sendmail(sender, receivers, message.as_string())
+			smtpObj.login(sender, key) #邮箱登录
+			smtpObj.sendmail(sender, receiver, message.as_string())
 			print ("邮件发送成功")
 		except smtplib.SMTPException as e:
 			print ("Error: 发送邮件产生错误")
 			print(e)
 	time.sleep(1)
 smtpObj.close()
-
